@@ -3,7 +3,7 @@ from typing import Literal
 from datatrove.data import Document
 from datatrove.pipeline.filters.base_filter import BaseFilter
 from datatrove.pipeline.writers.disk_base import DiskWriter
-from datatrove.utils.lid import FT176LID, GlotLID
+from datatrove.utils.lid import FT176LID, GlotLID, fastlangidLID
 
 
 class LanguageFilter(BaseFilter):
@@ -15,7 +15,7 @@ class LanguageFilter(BaseFilter):
         languages: list[str] | str | None = None,
         language_threshold: float = 0.65,
         exclusion_writer: DiskWriter = None,
-        backend: Literal["ft176", "glotlid"] = "ft176",
+        backend: Literal["ft176", "glotlid", "fastlangid"] = "ft176",
         label_only: bool = False,
         keep_top_pairs_threshold: float = -1,
     ):
@@ -36,7 +36,12 @@ class LanguageFilter(BaseFilter):
             languages = list(languages)
         self.languages = languages
         self.backend = backend
-        self.model = FT176LID(languages) if backend == "ft176" else GlotLID(languages)
+        if backend == "ft176":
+            self.model = FT176LID(languages)
+        elif backend == "glotlid":
+            self.model = GlotLID(languages)
+        elif backend == "fastlangid":
+            self.model = fastlangidLID(languages) 
         self.label_only = label_only
         self.keep_top_pairs_threshold = keep_top_pairs_threshold
 

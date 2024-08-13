@@ -34,6 +34,8 @@ class Languages:
     turkish = "tr"
     dutch = "nl"
     chinese = "zh"
+    chinese_simplified = "zh-hans"
+    chinese_traditional = "zh-hant"
     japanese = "ja"
     vietnamese = "vi"
     indonesian = "id"

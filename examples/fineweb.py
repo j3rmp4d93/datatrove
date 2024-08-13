@@ -19,7 +19,7 @@ from datatrove.pipeline.formatters import PIIFormatter
 from datatrove.pipeline.readers import JsonlReader, WarcReader
 from datatrove.pipeline.tokens import TokensCounter
 from datatrove.pipeline.writers.jsonl import JsonlWriter
-
+from datatrove.utils.typeshelper import Languages
 
 """
     we first ran the following pipeline for each dump
@@ -40,11 +40,7 @@ main_processing_executor = SlurmPipelineExecutor(
         URLFilter(exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/1_url/{DUMP_TO_PROCESS}")),
         Trafilatura(favour_precision=True),
         LanguageFilter(
-            exclusion_writer=JsonlWriter(
-                f"{FILTERING_OUTPUT_PATH}/2_non_english/",
-                output_filename="${language}/" + DUMP_TO_PROCESS + "/${rank}.jsonl.gz",
-                # folder structure: language/dump/file
-            )
+            LanguageFilter(languages=[Languages.chinese_traditional], backend="fastlangid")
         ),
         GopherRepetitionFilter(
             exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/3_gopher_rep/{DUMP_TO_PROCESS}")
