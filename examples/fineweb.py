@@ -43,7 +43,7 @@ main_processing_executor = SlurmPipelineExecutor(
             LanguageFilter(languages=[Languages.chinese_traditional], backend="fastlangid")
         ),
         GopherRepetitionFilter(
-            exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/3_gopher_rep/{DUMP_TO_PROCESS}")
+            language=Languages.chinese_traditional
         ),
         GopherQualityFilter(
             exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/4_gopher_qual/{DUMP_TO_PROCESS}")

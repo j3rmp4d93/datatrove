@@ -236,6 +236,7 @@ WORD_TOKENIZER_FACTORY: dict[str, Callable[[], WordTokenizer]] = {
     Languages.spanish: lambda: NLTKTokenizer("spanish"),
     Languages.swedish: lambda: NLTKTokenizer("swedish"),
     Languages.turkish: lambda: NLTKTokenizer("turkish"),
+    Languages.chinese: lambda: SpaCyTokenizer("zh", {"nlp": {"tokenizer": {"segmenter": "jieba"}}}),
     Languages.chinese_traditional: lambda: SpaCyTokenizer("zh", {"nlp": {"tokenizer": {"segmenter": "jieba"}}}),
     Languages.chinese_simplified: lambda: SpaCyTokenizer("zh", {"nlp": {"tokenizer": {"segmenter": "jieba"}}}),
     Languages.japanese: lambda: StanzaTokenizer("ja"),
