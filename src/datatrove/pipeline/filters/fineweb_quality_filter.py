@@ -27,12 +27,14 @@ class FineWebQualityFilter(BaseFilter):
         self.char_duplicates_ratio = char_duplicates_ratio
         self.new_line_ratio = new_line_ratio
         self.tokenizer = load_word_tokenizer(language)
+        self.stop_chars = (".", "'", '"', "!", "?")
+        if language in [Languages.chinese, Languages.chinese_simplified, Languages.chinese_traditional]:
+            self.stop_chars += ("。","、", "“", "？", "！")
 
     def filter(self, doc) -> bool | tuple[bool, str]:
-        stop_chars = (".", "'", '"', "!", "?")
 
         lines = doc.text.split("\n")
-        ratio = sum(1 for line in lines if line.endswith(stop_chars)) / len(lines)
+        ratio = sum(1 for line in lines if line.endswith(self.stop_chars)) / len(lines)
         if ratio <= self.line_punct_thr and not (ratio == 0 and self.line_punct_exclude_zero):
             return False, "line_punct_ratio"
 

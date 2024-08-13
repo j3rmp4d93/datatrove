@@ -37,7 +37,7 @@ main_processing_executor = SlurmPipelineExecutor(
             glob_pattern="*/warc/*",  # we want the warc files
             default_metadata={"dump": DUMP_TO_PROCESS},
         ),
-        URLFilter(exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/1_url/{DUMP_TO_PROCESS}")),
+        URLFilter(),
         Trafilatura(favour_precision=True),
         LanguageFilter(
             LanguageFilter(languages=[Languages.chinese_traditional], backend="fastlangid")
@@ -54,10 +54,11 @@ main_processing_executor = SlurmPipelineExecutor(
         ),
         C4QualityFilter(
             filter_no_terminal_punct=False,
-            exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/5_c4/{DUMP_TO_PROCESS}"),
         ),
         FineWebQualityFilter(
-            exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/6_fineweb_qual/{DUMP_TO_PROCESS}")
+            language=Languages.chinese_traditional,
+            short_line_length=100,
+            short_line_thr=0.51
         ),
         JsonlWriter(f"{FILTERING_OUTPUT_PATH}/output/{DUMP_TO_PROCESS}"),
     ],

@@ -108,7 +108,7 @@ class fastlangidLID(LID):
         results = self.model.predict(doc.text.replace("\n", " "), prob=True, k=self.k)
         if not isinstance(results, list):
             results=[results]
-        lang_pairs = {lang: score for lang, score in results}
+        lang_pairs = {lang: float(score) for lang, score in results}
         best_lang_pair = max(lang_pairs.items(), key=lambda x: x[1])
         return best_lang_pair, {
             lang: lang_pairs.get(lang, 0.0) for lang in self.languages
