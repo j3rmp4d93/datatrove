@@ -31,7 +31,6 @@ MAIN_OUTPUT_PATH = "/home/u231360/fineweb-TC"
 FILTERING_OUTPUT_PATH = f"{MAIN_OUTPUT_PATH}/base_processing"
 
 main_processing_executor = LocalPipelineExecutor(
-    job_name=f"cc_{DUMP_TO_PROCESS}",
     pipeline=[
         WarcReader(
             f"s3://commoncrawl/crawl-data/{DUMP_TO_PROCESS}/segments/",
@@ -66,6 +65,7 @@ main_processing_executor = LocalPipelineExecutor(
     tasks=8000,
     logging_dir=f"{MAIN_OUTPUT_PATH}/logs/base_processing/{DUMP_TO_PROCESS}",
     randomize_start_duration=180,  # don't hit the bucket all at once with the list requests
+    workers=64,
 )
 main_processing_executor.run()
 
@@ -94,7 +94,6 @@ INPUT_READER = ParquetReader(
 
 # stage 1 computes minhash signatures for each task (each task gets a set of files)
 stage1 = LocalPipelineExecutor(
-    job_name=f"mh1_{DUMP_TO_PROCESS}",
     pipeline=[
         INPUT_READER,
         MinhashDedupSignature(
@@ -106,10 +105,10 @@ stage1 = LocalPipelineExecutor(
     logging_dir=f"{S3_LOGS_FOLDER}/signatures",
     randomize_start_duration=180,
     depends=main_processing_executor,  # only start after the first one completes
+    workers=64,
 )
 
 stage2 = LocalPipelineExecutor(
-    job_name=f"mh2_{DUMP_TO_PROCESS}",
     pipeline=[
         MinhashDedupBuckets(
             input_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/signatures",
@@ -122,11 +121,11 @@ stage2 = LocalPipelineExecutor(
     randomize_start_duration=180,
     logging_dir=f"{S3_LOGS_FOLDER}/buckets",
     depends=stage1,
+    workers=64,
 )
 
 
 stage3 = LocalPipelineExecutor(
-    job_name=f"mh3_{DUMP_TO_PROCESS}",
     pipeline=[
         MinhashDedupCluster(
             input_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/buckets",
@@ -137,11 +136,11 @@ stage3 = LocalPipelineExecutor(
     tasks=1,  # this step runs on a single task
     logging_dir=f"{S3_LOGS_FOLDER}/clustering",
     depends=stage2,
+    workers=64,
 )
 
 
 stage4 = LocalPipelineExecutor(
-    job_name=f"mh4_{DUMP_TO_PROCESS}",
     pipeline=[
         INPUT_READER,
         TokensCounter(),  # you can remove this one, it's just a nice way to know how many tokens we have
@@ -154,6 +153,7 @@ stage4 = LocalPipelineExecutor(
     tasks=TOTAL_TASKS,
     logging_dir=f"{S3_LOGS_FOLDER}/filtering",
     depends=stage3,
+    workers=64,
 )
 
 # launch dedup pipelines
