@@ -16,9 +16,10 @@ from datatrove.pipeline.filters import (
     URLFilter,
 )
 from datatrove.pipeline.formatters import PIIFormatter
-from datatrove.pipeline.readers import JsonlReader, WarcReader
+from datatrove.pipeline.readers import WarcReader
 from datatrove.pipeline.tokens import TokensCounter
-from datatrove.pipeline.writers.jsonl import JsonlWriter
+from datatrove.pipeline.writers import ParquetWriter
+from datatrove.pipeline.readers import ParquetReader
 from datatrove.utils.typeshelper import Languages
 
 """
@@ -60,7 +61,7 @@ main_processing_executor = SlurmPipelineExecutor(
             short_line_length=100,
             short_line_thr=0.51
         ),
-        JsonlWriter(f"{FILTERING_OUTPUT_PATH}/output/{DUMP_TO_PROCESS}"),
+        ParquetWriter(f"{FILTERING_OUTPUT_PATH}/output/{DUMP_TO_PROCESS}"),
     ],
     tasks=8000,
     time="10:00:00",
@@ -91,7 +92,7 @@ LOCAL_LOGS_FOLDER = "logs/minhash"
 TOTAL_TASKS = 1000
 
 # this is the original data that we want to deduplicate
-INPUT_READER = JsonlReader(
+INPUT_READER = ParquetReader(
     f"{FILTERING_OUTPUT_PATH}/output/{DUMP_TO_PROCESS}"
 )  # this is the output from the first part
 
@@ -163,7 +164,7 @@ stage4 = SlurmPipelineExecutor(
         MinhashDedupFilter(input_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/remove_ids"),
         # run the PII removal
         PIIFormatter(),
-        JsonlWriter(f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/deduped_output"),
+        ParquetWriter(f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/deduped_output"),
     ],
     tasks=TOTAL_TASKS,
     logging_dir=f"{S3_LOGS_FOLDER}/filtering",
