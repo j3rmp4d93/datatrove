@@ -12,7 +12,7 @@ from datatrove.pipeline.writers.jsonl import JsonlWriter
 
 
 # you can also change ngrams or the number of buckets and their size here
-minhash_config = MinhashConfig(use_64bit_hashes=True)  # better precision -> fewer false positives (collisions)
+minhash_config = MinhashConfig()  # better precision -> fewer false positives (collisions)
 
 S3_MINHASH_BASE_PATH = "s3://mybucket/minhash/"
 

@@ -78,7 +78,6 @@ main_processing_executor.run()
 
 # you can also change ngrams or the number of buckets and their size here
 minhash_config = MinhashConfig(
-    use_64bit_hashes=True,  # better precision -> fewer false positives (collisions)
     num_buckets=14,
     hashes_per_bucket=8,
     n_grams=5,
@@ -102,7 +101,8 @@ stage1 = SlurmPipelineExecutor(
     pipeline=[
         INPUT_READER,
         MinhashDedupSignature(
-            output_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/signatures", config=minhash_config
+            output_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/signatures", config=minhash_config,
+            language=Languages.chinese_traditional
         ),
     ],
     tasks=TOTAL_TASKS,
@@ -120,7 +120,7 @@ stage2 = SlurmPipelineExecutor(
         MinhashDedupBuckets(
             input_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/signatures",
             output_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/buckets",
-            config=MinhashConfig(use_64bit_hashes=True),
+            config=minhash_config,
         ),
     ],
     tasks=minhash_config.num_buckets * 50,  # the code supports parallelizing each bucket. here we run 50
