@@ -46,7 +46,10 @@ main_processing_executor = SlurmPipelineExecutor(
             language=Languages.chinese_traditional
         ),
         GopherQualityFilter(
-            exclusion_writer=JsonlWriter(f"{FILTERING_OUTPUT_PATH}/removed/4_gopher_qual/{DUMP_TO_PROCESS}")
+            language=Languages.chinese_traditional,
+            min_avg_word_length=1,
+            max_avg_word_length=5,
+            min_stop_words=10,
         ),
         C4QualityFilter(
             filter_no_terminal_punct=False,

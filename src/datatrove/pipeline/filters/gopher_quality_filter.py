@@ -6,6 +6,7 @@ from datatrove.pipeline.writers.disk_base import DiskWriter
 from datatrove.utils.text import PUNCTUATION_SET
 from datatrove.utils.typeshelper import Languages
 from datatrove.utils.word_tokenizers import load_word_tokenizer
+from datatrove.utils._import_utils import check_required_dependencies
 
 
 STOP_WORDS = ["the", "be", "to", "of", "and", "that", "have", "with"]
@@ -56,8 +57,15 @@ class GopherQualityFilter(BaseFilter):
         self.max_ellipsis_lines_ratio = max_ellipsis_lines_ratio
         self.max_non_alpha_words_ratio = max_non_alpha_words_ratio
         self.min_stop_words = min_stop_words
-        self.stop_words = set(STOP_WORDS if stop_words is None else stop_words)
+        if language==Languages.chinese_traditional:
+            check_required_dependencies("io", ["TCSP"])
+            from TCSP import read_stopwords_list
+            import re
+            self.stop_words = set([item for item in read_stopwords_list() if re.search('[a-zA-Z0-9]', item)==None and all([c.isalpha() for c in item])])
+        else:
+            self.stop_words = set(STOP_WORDS if stop_words is None else stop_words)
         self.tokenizer = load_word_tokenizer(language)
+        
 
     def filter(self, doc: Document) -> bool | tuple[bool, str]:
         """
