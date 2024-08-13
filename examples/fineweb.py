@@ -50,6 +50,7 @@ main_processing_executor = SlurmPipelineExecutor(
             min_avg_word_length=1,
             max_avg_word_length=5,
             min_stop_words=10,
+            max_non_alpha_words_ratio=0.75
         ),
         C4QualityFilter(
             filter_no_terminal_punct=False,

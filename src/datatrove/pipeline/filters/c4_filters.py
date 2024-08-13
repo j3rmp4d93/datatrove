@@ -84,6 +84,7 @@ class C4QualityFilter(BaseFilter):
         self.filter_curly_bracket = filter_curly_bracket
         self.filter_policy = filter_policy
         self.tokenizer = load_word_tokenizer(language)
+        self.language = language
 
     def filter(self, doc: Document) -> bool | tuple[bool, str]:
         lines = doc.text.splitlines() if self.split_paragraph else self.tokenizer.sent_tokenize(doc.text)
@@ -93,7 +94,10 @@ class C4QualityFilter(BaseFilter):
 
         for line in lines:
             line = line.strip()
-            words = line.split()
+            if self.language in [Languages.chinese, Languages.chinese_simplified, Languages.chinese_traditional]:
+                words = self.tokenizer.word_tokenize(line)
+            else:
+                words = line.split()
             self.stat_update("line-total")
             # check line has too long word
             if self.max_word_length != -1 and any(len(word) > self.max_word_length for word in words):
