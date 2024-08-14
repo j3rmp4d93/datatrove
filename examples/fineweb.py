@@ -21,11 +21,14 @@ from datatrove.pipeline.tokens import TokensCounter
 from datatrove.pipeline.writers import ParquetWriter
 from datatrove.pipeline.readers import ParquetReader
 from datatrove.utils.typeshelper import Languages
-
+import argparse
+parser = argparse.ArgumentParser(description='fineweb Traditional Chinese')
+parser.add_argument('-d', type=str, help='which dump of cc to process, eg. CC-MAIN-2023-50', default=None, required=True)
+parser.add_argument('-num_worker', type=int, help='number of workers', default=1)
+args = parser.parse_args()
 """
     we first ran the following pipeline for each dump
 """
-DUMP_TO_PROCESS = "CC-MAIN-2023-50"  # example
 
 MAIN_OUTPUT_PATH = "/home/u231360/fineweb-TC"
 FILTERING_OUTPUT_PATH = f"{MAIN_OUTPUT_PATH}/base_processing"
@@ -33,9 +36,9 @@ if __name__ == '__main__':
     main_processing_executor = LocalPipelineExecutor(
         pipeline=[
             WarcReader(
-                f"https://data.commoncrawl.org/crawl-data/{DUMP_TO_PROCESS}/warc.paths.gz",
+                f"https://data.commoncrawl.org/crawl-data/{args.d}/warc.paths.gz",
                 glob_pattern="*/warc/*",  # we want the warc files
-                default_metadata={"dump": DUMP_TO_PROCESS},
+                default_metadata={"dump": args.d},
             ),
             URLFilter(),
             Trafilatura(favour_precision=True, timeout=2.),
@@ -59,12 +62,12 @@ if __name__ == '__main__':
                 short_line_length=100,
                 short_line_thr=0.51
             ),
-            ParquetWriter(f"{FILTERING_OUTPUT_PATH}/output/{DUMP_TO_PROCESS}"),
+            ParquetWriter(f"{FILTERING_OUTPUT_PATH}/output/{args.d}"),
         ],
         tasks=8000,
-        logging_dir=f"{MAIN_OUTPUT_PATH}/logs/base_processing/{DUMP_TO_PROCESS}",
+        logging_dir=f"{MAIN_OUTPUT_PATH}/logs/base_processing/{args.d}",
         randomize_start_duration=180,  # don't hit the bucket all at once with the list requests
-        workers=64,
+        workers=args.num_worker,
     )
     main_processing_executor.run()
 
@@ -88,7 +91,7 @@ if __name__ == '__main__':
 
     # this is the original data that we want to deduplicate
     INPUT_READER = ParquetReader(
-        f"{FILTERING_OUTPUT_PATH}/output/{DUMP_TO_PROCESS}"
+        f"{FILTERING_OUTPUT_PATH}/output/{args.d}"
     )  # this is the output from the first part
 
     # stage 1 computes minhash signatures for each task (each task gets a set of files)
@@ -96,7 +99,7 @@ if __name__ == '__main__':
         pipeline=[
             INPUT_READER,
             MinhashDedupSignature(
-                output_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/signatures", config=minhash_config,
+                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/signatures", config=minhash_config,
                 language=Languages.chinese_traditional
             ),
         ],
@@ -104,14 +107,14 @@ if __name__ == '__main__':
         logging_dir=f"{S3_LOGS_FOLDER}/signatures",
         randomize_start_duration=180,
         depends=main_processing_executor,  # only start after the first one completes
-        workers=64,
+        workers=args.num_worker,
     )
 
     stage2 = LocalPipelineExecutor(
         pipeline=[
             MinhashDedupBuckets(
-                input_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/signatures",
-                output_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/buckets",
+                input_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/signatures",
+                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/buckets",
                 config=minhash_config,
             ),
         ],
@@ -120,22 +123,22 @@ if __name__ == '__main__':
         randomize_start_duration=180,
         logging_dir=f"{S3_LOGS_FOLDER}/buckets",
         depends=stage1,
-        workers=64,
+        workers=args.num_worker,
     )
 
 
     stage3 = LocalPipelineExecutor(
         pipeline=[
             MinhashDedupCluster(
-                input_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/buckets",
-                output_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/remove_ids",
+                input_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/buckets",
+                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/remove_ids",
                 config=minhash_config,
             ),
         ],
         tasks=1,  # this step runs on a single task
         logging_dir=f"{S3_LOGS_FOLDER}/clustering",
         depends=stage2,
-        workers=64,
+        workers=args.num_worker,
     )
 
 
@@ -144,15 +147,15 @@ if __name__ == '__main__':
             INPUT_READER,
             TokensCounter(),  # you can remove this one, it's just a nice way to know how many tokens we have
             # before and after dedup
-            MinhashDedupFilter(input_folder=f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/remove_ids"),
+            MinhashDedupFilter(input_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/remove_ids"),
             # run the PII removal
             PIIFormatter(),
-            ParquetWriter(f"{S3_MINHASH_BASE_PATH}/{DUMP_TO_PROCESS}/deduped_output"),
+            ParquetWriter(f"{S3_MINHASH_BASE_PATH}/{args.d}/deduped_output"),
         ],
         tasks=TOTAL_TASKS,
         logging_dir=f"{S3_LOGS_FOLDER}/filtering",
         depends=stage3,
-        workers=64,
+        workers=args.num_worker,
     )
 
     # launch dedup pipelines
