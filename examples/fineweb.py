@@ -23,7 +23,7 @@ from datatrove.pipeline.readers import ParquetReader
 from datatrove.utils.typeshelper import Languages
 import argparse
 parser = argparse.ArgumentParser(description='fineweb Traditional Chinese')
-parser.add_argument('-d', type=str, help='which dump of cc to process, eg. CC-MAIN-2023-50', default=None, required=True)
+parser.add_argument('-dump', type=str, help='which dump of cc to process, eg. CC-MAIN-2023-50', default=None, required=True)
 parser.add_argument('-num_worker', type=int, help='number of workers', default=1)
 args = parser.parse_args()
 """
@@ -36,9 +36,9 @@ if __name__ == '__main__':
     main_processing_executor = LocalPipelineExecutor(
         pipeline=[
             WarcReader(
-                f"https://data.commoncrawl.org/crawl-data/{args.d}/warc.paths.gz",
+                f"https://data.commoncrawl.org/crawl-data/{args.dump}/warc.paths.gz",
                 glob_pattern="*/warc/*",  # we want the warc files
-                default_metadata={"dump": args.d},
+                default_metadata={"dump": args.dump},
             ),
             URLFilter(),
             Trafilatura(favour_precision=True, timeout=2.),
@@ -49,9 +49,9 @@ if __name__ == '__main__':
             GopherQualityFilter(
                 language=Languages.chinese_traditional,
                 min_avg_word_length=1,
-                max_avg_word_length=5,
+                max_avg_word_length=3,
                 min_stop_words=10,
-                max_non_alpha_words_ratio=0.75
+                max_non_alpha_words_ratio=0.8
             ),
             C4QualityFilter(
                 filter_no_terminal_punct=False,
@@ -59,13 +59,13 @@ if __name__ == '__main__':
             ),
             FineWebQualityFilter(
                 language=Languages.chinese_traditional,
-                short_line_length=100,
-                short_line_thr=0.51
+                short_line_length=30,
+                short_line_thr=0.67
             ),
-            ParquetWriter(f"{FILTERING_OUTPUT_PATH}/output/{args.d}"),
+            ParquetWriter(f"{FILTERING_OUTPUT_PATH}/output/{args.dump}"),
         ],
         tasks=8000,
-        logging_dir=f"{MAIN_OUTPUT_PATH}/logs/base_processing/{args.d}",
+        logging_dir=f"{MAIN_OUTPUT_PATH}/logs/base_processing/{args.dump}",
         randomize_start_duration=180,  # don't hit the bucket all at once with the list requests
         workers=args.num_worker,
     )
@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     # this is the original data that we want to deduplicate
     INPUT_READER = ParquetReader(
-        f"{FILTERING_OUTPUT_PATH}/output/{args.d}"
+        f"{FILTERING_OUTPUT_PATH}/output/{args.dump}"
     )  # this is the output from the first part
 
     # stage 1 computes minhash signatures for each task (each task gets a set of files)
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         pipeline=[
             INPUT_READER,
             MinhashDedupSignature(
-                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/signatures", config=minhash_config,
+                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.dump}/signatures", config=minhash_config,
                 language=Languages.chinese_traditional
             ),
         ],
@@ -113,8 +113,8 @@ if __name__ == '__main__':
     stage2 = LocalPipelineExecutor(
         pipeline=[
             MinhashDedupBuckets(
-                input_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/signatures",
-                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/buckets",
+                input_folder=f"{S3_MINHASH_BASE_PATH}/{args.dump}/signatures",
+                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.dump}/buckets",
                 config=minhash_config,
             ),
         ],
@@ -130,8 +130,8 @@ if __name__ == '__main__':
     stage3 = LocalPipelineExecutor(
         pipeline=[
             MinhashDedupCluster(
-                input_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/buckets",
-                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/remove_ids",
+                input_folder=f"{S3_MINHASH_BASE_PATH}/{args.dump}/buckets",
+                output_folder=f"{S3_MINHASH_BASE_PATH}/{args.dump}/remove_ids",
                 config=minhash_config,
             ),
         ],
@@ -147,10 +147,10 @@ if __name__ == '__main__':
             INPUT_READER,
             TokensCounter(),  # you can remove this one, it's just a nice way to know how many tokens we have
             # before and after dedup
-            MinhashDedupFilter(input_folder=f"{S3_MINHASH_BASE_PATH}/{args.d}/remove_ids"),
+            MinhashDedupFilter(input_folder=f"{S3_MINHASH_BASE_PATH}/{args.dump}/remove_ids"),
             # run the PII removal
             PIIFormatter(),
-            ParquetWriter(f"{S3_MINHASH_BASE_PATH}/{args.d}/deduped_output"),
+            ParquetWriter(f"{S3_MINHASH_BASE_PATH}/{args.dump}/deduped_output"),
         ],
         tasks=TOTAL_TASKS,
         logging_dir=f"{S3_LOGS_FOLDER}/filtering",
