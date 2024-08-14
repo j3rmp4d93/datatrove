@@ -1,4 +1,4 @@
-import os.path
+import os.path, re
 from glob import has_magic
 from typing import IO, Callable, TypeAlias
 
@@ -142,6 +142,9 @@ class DataFolder(DirFileSystem):
             extra_options["expand_info"] = False  # speed up
         if include_directories and not glob_pattern:
             extra_options["withdirs"] = True
+        if self.fs.isfile(self.path):
+            with self.open('', "r", compression='infer') as f:
+                return sorted([fn.strip() for fn in f.readlines()])
         return sorted(
             [
                 f
@@ -228,7 +231,10 @@ class DataFolder(DirFileSystem):
         """
         if self.auto_mkdir and ("w" in mode or "a" in mode):
             self.fs.makedirs(self.fs._parent(self._join(path)), exist_ok=True)
-        return super().open(path, mode=mode, *args, **kwargs)
+        if path!='' and self.fs.isfile(self.path):#if this datafolder is a file containing list of files to read.
+            return self.fs.open(self.path[:re.search(r'(?<!/)\/(?!/)', self.path).start()+1]+path, mode=mode, *args, **kwargs)
+        else:
+            return super().open(path, mode=mode, *args, **kwargs)
 
     def is_local(self):
         """
