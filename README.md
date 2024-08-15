@@ -1,5 +1,5 @@
 #requirements for fineweb-TC
-pip install pyahocorasick jieba TCSP
+pip install pyahocorasick jieba TCSP spacy  fastlangid
 
 # DataTrove
 
