@@ -33,6 +33,9 @@ args = parser.parse_args()
 MAIN_OUTPUT_PATH = "/home/u231360/fineweb-TC"
 FILTERING_OUTPUT_PATH = f"{MAIN_OUTPUT_PATH}/base_processing"
 if __name__ == '__main__':
+    from fsspec.implementations.http import HTTPFileSystem
+    file = HTTPFileSystem(f"https://data.commoncrawl.org/crawl-data/{args.dump}/warc.paths.gz")
+    total_warcs = len(file.read_text(f"https://data.commoncrawl.org/crawl-data/{args.dump}/warc.paths.gz", compression='infer').strip().split('\n'))
     main_processing_executor = LocalPipelineExecutor(
         pipeline=[
             WarcReader(
@@ -64,7 +67,7 @@ if __name__ == '__main__':
             ),
             ParquetWriter(f"{FILTERING_OUTPUT_PATH}/output/{args.dump}"),
         ],
-        tasks=8000,
+        tasks=total_warcs,
         logging_dir=f"{MAIN_OUTPUT_PATH}/logs/base_processing/{args.dump}",
         randomize_start_duration=180,  # don't hit the bucket all at once with the list requests
         workers=args.num_worker,
