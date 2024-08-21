@@ -1,0 +1,2 @@
+qsub -l walltime=24:00:00,nodes=1:ram192gb:ppn=2 -d . job.sh -F "-dump=CC-MAIN-2023-50 -num_worker=24"
+qsub -l walltime=24:00:00,nodes=1:ram384gb:ppn=2 -d . job.sh -F "-dump=CC-MAIN-2023-50 -num_worker=64"
