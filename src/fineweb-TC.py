@@ -2,7 +2,8 @@
 This file contains the code used to process and create the
 FineWeb dataset (https://huggingface.co/datasets/HuggingFaceFW/fineweb)
 """
-
+import os
+os.environ['OPENBLAS_NUM_THREADS'] = '2'
 from datatrove.executor import LocalPipelineExecutor
 from datatrove.pipeline.dedup import MinhashDedupCluster, MinhashDedupFilter, MinhashDedupSignature
 from datatrove.pipeline.dedup.minhash import MinhashConfig, MinhashDedupBuckets
