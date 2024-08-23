@@ -74,14 +74,14 @@ class LocalPipelineExecutor(PipelineExecutor):
                 self.pipeline = deepcopy(pipeline)
                 stats.append(self._run_for_rank(rank, 0))
         else:
-            @ray.remote(max_retries=-1)#will keep trying when failed, wait 30 mins to prevent ddos.
+            @ray.remote
             def _run_for_rank_ray(rank: int, local_rank: int):
-                try:
-                    return self._run_for_rank(rank, local_rank)  
-                except Exception as e:
-                    print(f"Task failed with error: {e}. wait 30mins before proceeding.")
-                    time.sleep(1800)
-                    raise e
+                while True:#will keep trying when failed, wait 30 mins to prevent ddos.
+                    try:
+                        return self._run_for_rank(rank, local_rank)  
+                    except Exception as e:
+                        print(f"Task failed with error: {e}. wait 30mins before proceeding.")
+                        time.sleep(1800)
 
             actors = [_run_for_rank_ray for _ in range(self.workers)]
             actor_pool = ray.util.ActorPool(actors)

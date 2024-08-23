@@ -45,7 +45,7 @@ if __name__ == '__main__':
                 default_metadata={"dump": args.dump},
             ),
             URLFilter(),
-            Trafilatura(favour_precision=True, timeout=2.),
+            Trafilatura(favour_precision=True, timeout=5.),
             LanguageFilter(languages=[Languages.chinese_traditional], backend="fastlangid"),
             GopherRepetitionFilter(
                 language=Languages.chinese_traditional
